@@ -1,5 +1,5 @@
 from adversary import RandomAdversary
-from board import Board, Direction, Rotation, Shape
+from board import Board, Direction, Rotation, Action, Shape
 from constants import BOARD_HEIGHT, BOARD_WIDTH, BLOCK_LIMIT, PREFIX
 from exceptions import UnknownInstructionException, BlockLimitException
 from player import Player
@@ -31,6 +31,11 @@ class RemotePlayer(Player):
 
         try:
             return Rotation(instruction)
+        except ValueError:
+            pass
+
+        try:
+            return Action(instruction)
         except ValueError:
             pass
 

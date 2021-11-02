@@ -22,5 +22,4 @@ class RandomAdversary(Adversary):
                 raise BlockLimitException()
             else:
                 self.blocks -= 1
-
-        return self.random.choice(list(Shape))
+        return self.random.choice(list(Shape)[:-1])

@@ -1,5 +1,5 @@
 from adversary import Adversary
-from board import Board, Direction, Rotation, Shape
+from board import Board, Direction, Rotation, Action, Shape
 from constants import BOARD_HEIGHT, BOARD_WIDTH, PREFIX
 from exceptions import UnknownInstructionException
 from player import SelectedPlayer
@@ -40,5 +40,8 @@ for move in board.run(player, adversary):
         print(f'{PREFIX} {move.value}')
     elif isinstance(move, Rotation):
         print(f'{PREFIX} {move.value}')
+    elif isinstance(move, Action):
+        print(f'{PREFIX} {move.value}')
     elif move is None:
         print(f'{PREFIX} SKIP')
+        

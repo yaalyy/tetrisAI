@@ -1,7 +1,9 @@
 from adversary import RandomAdversary
 from arguments import parser
-from board import Board, Direction, Rotation
-from constants import BOARD_WIDTH, BOARD_HEIGHT, DEFAULT_SEED, INTERVAL
+from board import Board, Direction, Rotation, Action
+from constants import BOARD_WIDTH, BOARD_HEIGHT, DEFAULT_SEED, INTERVAL,\
+    BLOCK_LIMIT
+from exceptions import BlockLimitException
 from player import SelectedPlayer, Player
 from time import sleep
 
@@ -20,6 +22,8 @@ COLOR_GREEN = 8
 COLOR_CYAN = 9
 COLOR_BLUE = 10
 COLOR_MAGENTA = 11
+COLOR_BOMB = 12
+COLOR_DISCARD = 13
 COLOR_NAMES = {
     "red": COLOR_RED,
     "orange": COLOR_ORANGE,
@@ -27,13 +31,15 @@ COLOR_NAMES = {
     "green": COLOR_GREEN,
     "cyan": COLOR_CYAN,
     "blue": COLOR_BLUE,
-    "magenta": COLOR_MAGENTA
+    "magenta": COLOR_MAGENTA,
+    "white": COLOR_BOMB
 }
 
-
 def paint(window, x, y, color, count=1):
-    window.addstr(y, x*2, '  ' * count, curses.color_pair(color))
-
+    if color == COLOR_BOMB:
+        window.addstr(y, x*2, '<>' * count, curses.color_pair(color))
+    else:
+        window.addstr(y, x*2, '  ' * count, curses.color_pair(color))
 
 def render(window, board):
     """
@@ -54,7 +60,17 @@ def render(window, board):
                 color = COLOR_NOTHING
             paint(window, x+1, y, color)
 
+    # Draw the score
+    window.addstr(
+        0,
+        (board.width*2)+5,
+        f'SCORE: {board.score} ',
+        curses.color_pair(COLOR_NOTHING)
+    )
+
     # Draw the next piece
+    window.addstr(2, (board.width*2)+5, 'NEXT',
+                  curses.color_pair(COLOR_NOTHING))
     if board.next is not None:
         for y in range(6):
             for x in range(4):
@@ -63,15 +79,38 @@ def render(window, board):
                 else:
                     color = COLOR_NOTHING
 
-                paint(window, board.width+x+3, y+1, color)
+                paint(window, board.width+x+3, y+3, color)
 
-    # Draw the score line below the window.
-    window.addstr(
-        board.height+2,
-        0,
-        f'Score: {board.score} ',
-        curses.color_pair(COLOR_NOTHING)
-    )
+    # Draw the bombs
+    window.addstr(7, (board.width*2)+5, 'BOMBS',
+                  curses.color_pair(COLOR_NOTHING))
+    for bomb in range(1,6):
+        if board.bombs_remaining >= bomb:
+            s = '<>'
+            color = COLOR_BOMB
+        else:
+            s = '  '
+            color = COLOR_NOTHING
+        window.addstr(8, (board.width*2)+5+(bomb-1)*3, s,
+                      curses.color_pair(color))
+        
+
+    # Draw the Discards
+    window.addstr(10, (board.width*2)+5, 'DISCARDS',
+                  curses.color_pair(COLOR_NOTHING))
+    discards = board.discards_remaining
+    if discards >= 5:
+        s1 = "X X X X X"
+        s2 = (discards - 5)*" X" + (10-discards)*"  "
+    else:
+        s1 = discards*"X " + (5-discards)*"  "
+        s2 = "          "
+    window.addstr(11, (board.width*2)+5, s1,
+                  curses.color_pair(COLOR_DISCARD))
+    window.addstr(12, (board.width*2)+5, s2,
+                  curses.color_pair(COLOR_DISCARD))
+    
+    
 
     # Draw the board frame
     window.move(0, 0)
@@ -128,13 +167,17 @@ class UserPlayer(Player):
             return Rotation.Anticlockwise
         elif key == ord('x'):
             return Rotation.Clockwise
-        elif key == curses.ascii.ESC:
+        elif key == ord('b'):
+            return Action.Bomb
+        elif key == ord('d'):
+            return Action.Discard
+        elif key == curses.ascii.ESC or key == ord('q'):
             raise SystemExit
 
 
 def run(window):
     board = Board(BOARD_WIDTH, BOARD_HEIGHT)
-    adversary = RandomAdversary(DEFAULT_SEED)
+    adversary = RandomAdversary(DEFAULT_SEED, BLOCK_LIMIT)
 
     args = parser.parse_args()
     if args.manual:
@@ -144,18 +187,25 @@ def run(window):
         window.timeout(0)
         player = SelectedPlayer()
 
-    for move in board.run(player, adversary):
-        render(window, board)
+    try:
+        for move in board.run(player, adversary):
+            render(window, board)
 
-        if not args.manual:
-            while True:
-                key = window.getch()
-                if key == -1:
-                    break
-                elif key == curses.ascii.ESC:
-                    raise SystemExit
+            if not args.manual:
+                while True:
+                    key = window.getch()
+                    if key == -1:
+                        break
+                    elif key == curses.ascii.ESC:
+                        raise SystemExit
             sleep(0.1)
-
+    except BlockLimitException:
+        window.addstr(BOARD_HEIGHT//2, 2,
+                      "Out of blocks", curses.color_pair(COLOR_NOTHING))
+    window.addstr(BOARD_HEIGHT//2+1, 2,
+                  "Score="+ str(board.score), curses.color_pair(COLOR_NOTHING))
+    window.addstr(BOARD_HEIGHT//2+2, 2,
+                  "Press a key to exit", curses.color_pair(COLOR_NOTHING))
     window.timeout(-1)
     window.getch()
 
@@ -170,7 +220,7 @@ if __name__ == '__main__':
 
         window = curses.newwin(
             BOARD_HEIGHT + 3,
-            (BOARD_WIDTH + 2 + 6)*2 + 1
+            (BOARD_WIDTH + 2 + 7)*2 + 1
         )
         window.keypad(True)
 
@@ -179,6 +229,7 @@ if __name__ == '__main__':
         curses.init_pair(COLOR_BLOCK, curses.COLOR_WHITE, curses.COLOR_RED)
         curses.init_pair(COLOR_CELL, curses.COLOR_WHITE, curses.COLOR_WHITE)
         curses.init_pair(COLOR_NOTHING, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(COLOR_DISCARD, curses.COLOR_RED, curses.COLOR_BLACK)
 
         # Orange is not supported.
         curses.init_pair(COLOR_ORANGE, curses.COLOR_WHITE, curses.COLOR_WHITE)
@@ -192,6 +243,7 @@ if __name__ == '__main__':
             curses.COLOR_WHITE,
             curses.COLOR_MAGENTA
         )
+        curses.init_pair(COLOR_BOMB, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
         run(window)
     finally:
