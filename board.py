@@ -328,15 +328,16 @@ class Board(Bitmap):
     bombs_remaining = None
     discards_remaining = None
 
-    def __init__(self, width, height, score=0):
+    def __init__(self, width, height, score=0,
+                 discards_remaining=10, bombs_remaining=5):
         self.width = width
         self.height = height
         self.score = score
         self.cells = set()
         self.cellcolor = {}
         self.lock = Lock()
-        self.bombs_remaining = 5
-        self.discards_remaining = 10
+        self.bombs_remaining = bombs_remaining
+        self.discards_remaining = discards_remaining
 
     def line_full(self, line):
         """
@@ -613,7 +614,8 @@ class Board(Bitmap):
         Creates a copy of the board; can be used to simulate possible moves.
         """
 
-        board = Board(self.width, self.height, self.score)
+        board = Board(self.width, self.height, self.score,
+                      self.discards_remaining, self.bombs_remaining)
         board.cells = set(self)
 
         # Copy the falling block, if any.
