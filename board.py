@@ -1,6 +1,7 @@
 from enum import Enum
 from threading import Lock
 from exceptions import NoBlockException
+from types import GeneratorType
 
 class Action(Enum):
     Bomb = 'BOMB'
@@ -446,6 +447,14 @@ class Board(Bitmap):
         self.next = Block(adversary.choose_block(self))
         return self.next.shape
 
+    def do_action(self, fn, clone, action=None):
+        # if choose_action yielded a generator, we'll need to perform
+        # the action on the clone as well as this board.  Otherwise
+        # only apply it on this board.
+        if clone:
+            fn(clone, action)
+        return fn(self,action)
+
     def run_player(self, player):
         """
         Asks the player for the next action and executes that on the board.
@@ -454,7 +463,8 @@ class Board(Bitmap):
         """
 
         while True:
-            actions = player.choose_action(self.clone())
+            clone = self.clone()
+            actions = player.choose_action(clone)
 
             try:
                 actions = iter(actions)
@@ -462,18 +472,24 @@ class Board(Bitmap):
                 # We were given a single move.
                 actions = [actions]
 
+
+            if not isinstance(actions, GeneratorType):
+                # save some work if choose_action didn't return a generator
+                clone = None
+
             landed = False
             for action in actions:
                 if action is None:
-                    landed = self.skip()
-                if action is Action.Bomb:
-                    landed = self.bomb()
+                    fn = Board.skip
+                elif action is Action.Bomb:
+                    fn = Board.bomb
                 elif action is Action.Discard:
-                    landed = self.discard()
+                    fn = Board.discard
                 elif isinstance(action, Direction):
-                    landed = self.move(action)
+                    fn = Board.move
                 elif isinstance(action, Rotation):
-                    landed = self.rotate(action)
+                    fn = Board.rotate
+                landed = self.do_action(fn, clone, action)
 
                 yield action
 
@@ -563,7 +579,7 @@ class Board(Bitmap):
             else:
                 return False
 
-    def bomb(self):
+    def bomb(self, action=None):
         """
         Skips the current turn, applies the implicit move down, and
         switches the next block to be a Bomb. Returns True if this
@@ -576,7 +592,7 @@ class Board(Bitmap):
             self.bombs_remaining -= 1
         return self.skip()
 
-    def discard(self):
+    def discard(self, action=None):
         """
         Discards the current block, switching to the next block. Returns
         True if this move caused the block to be dropped, False
@@ -595,7 +611,7 @@ class Board(Bitmap):
                 return True
             return False
 
-    def skip(self):
+    def skip(self, action=None):
         """
         Skips the current turn, and applies the implicit move down. Returns
         True if this move caused the block to be dropped, False otherwise.
