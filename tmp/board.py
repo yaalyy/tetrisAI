@@ -340,6 +340,17 @@ class Board(Bitmap):
         self.bombs_remaining = bombs_remaining
         self.discards_remaining = discards_remaining
 
+    def __str__(self):
+        s = ("--------")
+        for y in range(24):
+            s += "\n"
+            for x in range(10):
+                if (x,y) in self.cells:
+                    s += "#"
+                else:
+                    s += "."
+        return s
+
     def line_full(self, line):
         """
         Checks if the given line is fully occupied by cells.
@@ -428,6 +439,7 @@ class Board(Bitmap):
             return self.falling is None or not self.falling.collides(self)
 
     def place_next_block(self):
+        assert(False)
         # The next block is now falling
         self.falling = self.next
 
@@ -466,10 +478,6 @@ class Board(Bitmap):
             clone = self.clone()
             actions = player.choose_action(clone)
 
-            # force a move if none is returned
-            if actions == []:
-                actions = [None]
-
             try:
                 actions = iter(actions)
             except TypeError:
@@ -480,7 +488,6 @@ class Board(Bitmap):
             if not isinstance(actions, GeneratorType):
                 # save some work if choose_action didn't return a generator
                 clone = None
-
 
             landed = False
             for action in actions:

@@ -340,6 +340,17 @@ class Board(Bitmap):
         self.bombs_remaining = bombs_remaining
         self.discards_remaining = discards_remaining
 
+    def __str__(self):
+        s = ("--------")
+        for y in range(24):
+            s += "\n"
+            for x in range(10):
+                if (x,y) in self.cells:
+                    s += "#"
+                else:
+                    s += "."
+        return s
+
     def line_full(self, line):
         """
         Checks if the given line is fully occupied by cells.
@@ -633,6 +644,7 @@ class Board(Bitmap):
         board = Board(self.width, self.height, self.score,
                       self.discards_remaining, self.bombs_remaining)
         board.cells = set(self)
+        board.cellcolor = self.cellcolor.copy()
 
         # Copy the falling block, if any.
         if self.falling is not None:
