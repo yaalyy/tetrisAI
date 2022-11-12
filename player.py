@@ -66,13 +66,13 @@ class PlayerConnor(Player):
     def choose_action(self, board):
         self.print_board(board)
         
-        time.sleep(0.5)
+        #time.sleep(0.5)
         
         sandbox = board.clone()
         
-        return Direction.Drop
+        #return Direction.Drop
         
-        """
+        
         if self.random.random() > 0.97:
             # 3% chance we'll discard or drop a bomb
             return self.random.choice([
@@ -89,6 +89,6 @@ class PlayerConnor(Player):
                 Rotation.Clockwise,
             ])
             
-        """
+        
             
 SelectedPlayer = PlayerConnor
