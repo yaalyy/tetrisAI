@@ -379,7 +379,7 @@ class Board(Bitmap):
         above the cleaned lines down as well.
         """
 
-        scores = [0, 25, 100, 400, 1600]
+        scores = [0, 25000, 100000, 400000, 1600000]
         removed = 0
 
         line = self.height-1
