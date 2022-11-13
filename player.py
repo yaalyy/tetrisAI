@@ -50,6 +50,7 @@ class PlayerConnor(Player):
         self.random = Random(seed)
 
     def print_board(self, board):
+        """
         print("--------")
         for y in range(24):
             s = ""
@@ -59,18 +60,35 @@ class PlayerConnor(Player):
                 else:
                     s += "."
             print(s, y)
+        """
                 
 
             
 
     def choose_action(self, board):
-        self.print_board(board)
+        #self.print_board(board)
         
         time.sleep(0.5)
+        bestMoves = []
+        sandbox1 = board.clone()   # 2 sandboxes represent 2 horizontal directions of moving
+        sandbox2 = board.clone()
         
-        sandbox = board.clone()
-        
-        return Direction.Drop
+        i=0
+        for i in range(0,5):
+            j=i
+            for j in range(i):
+                sandbox1.move(Direction.Left)
+  
+    
+        bestMoves.append(Rotation.Clockwise)
+        bestMoves.append(Direction.Right)
+        bestMoves.append(Direction.Right)
+        bestMoves.append(Direction.Right)
+            
+        bestMoves.append(Direction.Right)
+        if board.falling.right == 9:
+            return None
+        return bestMoves
         
         """
         if self.random.random() > 0.97:
