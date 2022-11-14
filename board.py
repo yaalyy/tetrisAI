@@ -455,8 +455,7 @@ class Board(Bitmap):
         """
 
         # Ask the adversary for a new next block.
-        #self.next = Block(adversary.choose_block(self))
-        self.next = Block(Shape.I)
+        self.next = Block(adversary.choose_block(self))
         return self.next.shape
 
     def do_action(self, fn, clone, action=None):
