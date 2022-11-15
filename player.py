@@ -27,10 +27,19 @@ class PlayerConnor(Player):
                     s += "."
             print(s, y)
     
+    def getContainerHeight(self,board):     # Container is a collection of all blocks landed
+        maxHeight = board.height
+        for (x,y) in board.cells:
+            if y < maxHeight:
+                maxHeight = y
+        
+        maxHeight = board.height - maxHeight
+        return maxHeight    #the total height of container
+    
     def getLandingHeight(self,board):
         landingHeight = 0
         blockHeight = board.falling.bottom - board.falling.top + 1
-        maxheight = 24
+        maxheight = board.height
         xList = []
         for (x,y) in board.falling.cells:
             if x not in xList:
@@ -48,22 +57,50 @@ class PlayerConnor(Player):
         return landingHeight
                     
     def getRowsEliminated(self,board):
-        prevHeight = 24
+        prevHeight = board.height
         for (x,y) in board.cells:
             if y < prevHeight:
                 prevHeight = y    
         prevHeight = board.height - prevHeight
-        currentHeight = 24
+        currentHeight = board.height
         board.move(Direction.Drop)  
         for (x,y) in board.cells:
             if y < currentHeight:
                 currentHeight = y
         currentHeight = board.height - currentHeight
         rowsEliminated = prevHeight - currentHeight
+        if rowsEliminated < 0:
+            rowsEliminated = 0
         return rowsEliminated   
     
-    
-            
+    def getRowTransition(self,board):
+        rowTransition = 0
+        freeSpace = set()    #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            for j in range(board.height - self.getContainerHeight(board), board.height):
+                freeSpace.add((i,j))
+        
+        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
+        
+        for (x,y) in freeSpace:
+            if x == 0:
+                rowTransition = rowTransition + 1
+                if (x+1,y) not in freeSpace:
+                    rowTransition = rowTransition + 1
+            elif x == board.width - 1:
+                rowTransition = rowTransition + 1
+                if (x-1,y) not in freeSpace:
+                    rowTransition = rowTransition + 1
+            else:
+                if ((x-1,y) not in freeSpace):
+                    rowTransition = rowTransition + 1
+                if ((x+1,y) not in freeSpace):
+                    rowTransition = rowTransition + 1
+                    
+        return rowTransition
+        
+    def columnTransition(self,board):
+        columnTransition = 0
     def choose_action(self, board):
         #self.print_board(board)
         
@@ -96,15 +133,17 @@ class PlayerConnor(Player):
                 for j in range(i):
                     sandbox1.move(Direction.Left)
                     currentMoves.append(Direction.Left)
+                
+                landingHeight = self.getLandingHeight(sandbox1)
+                rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
                 currentMoves.append(Direction.Drop)
-                print(self.getLandingHeight(sandbox1))
-                sandbox1.move(Direction.Drop)
+                rowTransition = self.getRowTransition(sandbox1)
+                
                 self.print_board(sandbox1)
                 
                 
-             
         #waiting for sandbox2 to add
-       
+        #print(self.getRowTransition(board))
         
         if len(bestMoves) > 0:
             return bestMoves
