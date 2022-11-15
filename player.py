@@ -8,50 +8,13 @@ class Player:
     def choose_action(self, board):
         raise NotImplementedError
 
-"""
-class RandomPlayer(Player):
-    def __init__(self, seed=None):
-        self.random = Random(seed)
 
-    def print_board(self, board):
-        print("--------")
-        for y in range(24):
-            s = ""
-            for x in range(10):
-                if (x,y) in board.cells:
-                    s += "#"
-                else:
-                    s += "."
-            print(s, y)
-                
-
-            
-
-    def choose_action(self, board):
-        self.print_board(board)
-        time.sleep(0.5)
-        if self.random.random() > 0.97:
-            # 3% chance we'll discard or drop a bomb
-            return self.random.choice([
-                Action.Discard,
-                Action.Bomb,
-            ])
-        else:
-            # 97% chance we'll make a normal move
-            return self.random.choice([
-                Direction.Left,
-                Direction.Right,
-                Direction.Down,
-                Rotation.Anticlockwise,
-                Rotation.Clockwise,
-            ])
-""" 
 
 class PlayerConnor(Player):
     def __init__(self, seed=None):
         self.random = Random(seed)
         self.flag = 0
-        self.times = 0
+        
     def print_board(self, board):
         
         print("--------")
@@ -84,17 +47,27 @@ class PlayerConnor(Player):
         
         return landingHeight
                     
-                
+    def getRowsEliminated(self,board):
+        prevHeight = 24
+        for (x,y) in board.cells:
+            if y < prevHeight:
+                prevHeight = y    
+        prevHeight = board.height - prevHeight
+        currentHeight = 24
+        board.move(Direction.Drop)  
+        for (x,y) in board.cells:
+            if y < currentHeight:
+                currentHeight = y
+        currentHeight = board.height - currentHeight
+        rowsEliminated = prevHeight - currentHeight
+        return rowsEliminated   
+    
+    
             
-            
-                
-
-            
-
     def choose_action(self, board):
         #self.print_board(board)
         
-        #time.sleep(0.5)
+        time.sleep(0.5)
         bestMoves = []
         bestWeight = 0
         sandbox1 = board.clone()   # 2 sandboxes represent 2 horizontal directions of moving
@@ -123,52 +96,21 @@ class PlayerConnor(Player):
                 for j in range(i):
                     sandbox1.move(Direction.Left)
                     currentMoves.append(Direction.Left)
+                currentMoves.append(Direction.Drop)
+                print(self.getLandingHeight(sandbox1))
+                sandbox1.move(Direction.Drop)
+                self.print_board(sandbox1)
+                
+                
              
         #waiting for sandbox2 to add
-        print(board.clean())
-        times = self.times
-        xList = []
-        for (x,y) in board.cells:
-            if x not in xList:
-                xList.append(x)
-        #while(times in xList):
-          #  times = random.randint(0,9)
+       
         
-        times = times - 5
-        if times <= 0:
-            for i in range(0,-times):
-                bestMoves.append(Direction.Left)
-        elif times >= 1:
-            for i in range(0,times):
-                bestMoves.append(Direction.Right)
-                
-        bestMoves.append(Direction.Drop)
-        
-        self.times = self.times+1
-        if(self.times > 9):
-            self.times = 0
         if len(bestMoves) > 0:
             return bestMoves
         else:
             return None 
         
-        """
-        if self.random.random() > 0.97:
-            # 3% chance we'll discard or drop a bomb
-            return self.random.choice([
-                Action.Discard,
-                Action.Bomb,
-            ])
-        else:
-            # 97% chance we'll make a normal move
-            return self.random.choice([
-                Direction.Left,
-                Direction.Right,
-                Direction.Down,
-                Rotation.Anticlockwise,
-                Rotation.Clockwise,
-            ])
-            
-        """
+        
             
 SelectedPlayer = PlayerConnor
