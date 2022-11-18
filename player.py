@@ -189,22 +189,25 @@ class PlayerConnor(Player):
                 
         
     def choose_action(self, board):
-        #self.print_board(board)
         
-        time.sleep(0.5)
+        #time.sleep(0.5)
         bestMoves = []
-        bestWeight = 0
-        sandbox1 = board.clone()   # 2 sandboxes represent 2 horizontal directions of moving
-        sandbox2 = board.clone()
+        bestWeight = -999
         
+        landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
+        rowsEliminatedWeight = 3.4181268101392694
+        rowTransitionWeight = -3.2178882868487753
+        columnTransitionWeight = -9.348695305445199
+        numberOfHolesWeight = -7.899265427351652
+        wellSumsWeight = -3.3855972247263626
     
         for i in range(0,6):
-            j=i
-            currentMoves = []
-            currentWeight = 0
+            
             
             for k in range(0,4):
-                sandbox1 = board.clone()
+                sandbox1 = board.clone()  #sandbox1 represents moving left
+                currentMoves = []
+                currentWeight = 0
                 if k == 1:
                     sandbox1.rotate(Rotation.Clockwise)
                     currentMoves.append(Rotation.Clockwise)
@@ -227,8 +230,59 @@ class PlayerConnor(Player):
                 rowTransition = self.getRowTransition(sandbox1)
                 columnTransition = self.getColumnTransition(sandbox1)
                 numberOfHoles = self.getNumberOfHoles(sandbox1)
-                print(self.getWellSums(sandbox1))
-                self.print_board(sandbox1)
+                wellSums = self.getWellSums(sandbox1)
+                
+                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
+                if currentWeight > bestWeight:
+                    bestMoves = currentMoves
+                    bestWeight = currentWeight
+                
+                #print("current weight below:",currentWeight)
+                #print("best weight:",bestWeight)
+                #self.print_board(sandbox1)
+                #time.sleep(3)
+        for i in range(6,10):
+            
+            
+            for k in range(0,4):
+                sandbox2 = board.clone()  #sandbox2 represents moving right
+                currentMoves = []
+                currentWeight = 0
+                if k == 1:
+                    sandbox2.rotate(Rotation.Clockwise)
+                    currentMoves.append(Rotation.Clockwise)
+                elif k == 2:
+                    sandbox2.rotate(Rotation.Clockwise)
+                    sandbox2.rotate(Rotation.Clockwise)
+                    currentMoves.append(Rotation.Clockwise)
+                    currentMoves.append(Rotation.Clockwise)
+                elif k == 3:
+                    sandbox2.rotate(Rotation.Anticlockwise)
+                    currentMoves.append(Rotation.Anticlockwise)
+                
+                for j in range(i-5):
+                    sandbox2.move(Direction.Right)
+                    currentMoves.append(Direction.Right)
+                
+                landingHeight = self.getLandingHeight(sandbox2)
+                rowsEliminated = self.getRowsEliminated(sandbox2)   #A Drop move has been acted inside this function
+                currentMoves.append(Direction.Drop)
+                rowTransition = self.getRowTransition(sandbox2)
+                columnTransition = self.getColumnTransition(sandbox2)
+                numberOfHoles = self.getNumberOfHoles(sandbox2)
+                wellSums = self.getWellSums(sandbox2)
+                
+                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
+                if currentWeight > bestWeight:
+                    bestMoves = currentMoves
+                    bestWeight = currentWeight
+                
+                #print("current weight below:",currentWeight)
+                #print("best weight:",bestWeight)
+                #self.print_board(sandbox2)
+                #time.sleep(3)
+            
+            
                 
                 
         #waiting for sandbox2 to add
