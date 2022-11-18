@@ -99,8 +99,67 @@ class PlayerConnor(Player):
                     
         return rowTransition
         
-    def columnTransition(self,board):
+    def getColumnTransition(self,board):
         columnTransition = 0
+        xValid = []
+        for (x,y) in board.cells:
+            if x not in xValid:
+                xValid.append(x)
+                
+        freeSpace = set()  #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            if i in xValid:
+                for j in range(0,board.height):
+                    freeSpace.add((i,j))
+        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
+        for (x,y) in freeSpace:
+            if y == board.height - 1:
+                columnTransition = columnTransition + 1
+                if (x,y-1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            elif y == 0:
+                columnTransition = columnTransition + 1
+                if (x,y+1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            else:
+                if (x,y+1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+                if (x,y-1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            
+            
+        return columnTransition
+    
+    def isHole(self,x,y, board, boardTop):
+        
+        if y <= boardTop:
+            return False
+        elif y == boardTop + 1:
+            if (x,y-1) in board.cells:
+                return True
+            else:
+                return False
+        elif y > boardTop + 1:
+            if (x,y-1) in board.cells:
+                return True
+            else:
+                return self.isHole(x,y-1,board,boardTop)
+                
+        
+    def getNumberOfHoles(self,board):
+        holes = 0
+        freeSpace = set()    #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            for j in range(board.height - self.getContainerHeight(board), board.height):
+                freeSpace.add((i,j))
+        freeSpace = freeSpace.difference(board.cells)   #remove all non-free coordinates from the set
+        for (x,y) in freeSpace:
+            if self.isHole(x , y, board, board.height-self.getContainerHeight(board)):
+                holes = holes + 1
+        return holes
+            
+                
+        
     def choose_action(self, board):
         #self.print_board(board)
         
@@ -138,12 +197,14 @@ class PlayerConnor(Player):
                 rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
                 currentMoves.append(Direction.Drop)
                 rowTransition = self.getRowTransition(sandbox1)
-                
+                columnTransition = self.getColumnTransition(sandbox1)
+                numberOfHoles = self.getNumberOfHoles(sandbox1)
                 self.print_board(sandbox1)
                 
                 
         #waiting for sandbox2 to add
-        #print(self.getRowTransition(board))
+        
+        
         
         if len(bestMoves) > 0:
             return bestMoves
