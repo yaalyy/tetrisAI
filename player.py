@@ -157,7 +157,35 @@ class PlayerConnor(Player):
             if self.isHole(x , y, board, board.height-self.getContainerHeight(board)):
                 holes = holes + 1
         return holes
-            
+    
+    def getWellSums(self,board):
+        wellSum = 0
+        freeSpace = set()    #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            for j in range(board.height - self.getContainerHeight(board), board.height):
+                freeSpace.add((i,j))
+        freeSpace = freeSpace.difference(board.cells)   #remove all non-free coordinates from the set
+        for (x,y) in freeSpace:
+            if x == 0:
+                if ((x+1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+            if x == board.width - 1:
+                if ((x-1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x-1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+            else:
+                if ((x+1,y) in board.cells) and ((x-1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x-1,y-1) in board.cells) and ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+        
+        return wellSum
                 
         
     def choose_action(self, board):
@@ -199,6 +227,7 @@ class PlayerConnor(Player):
                 rowTransition = self.getRowTransition(sandbox1)
                 columnTransition = self.getColumnTransition(sandbox1)
                 numberOfHoles = self.getNumberOfHoles(sandbox1)
+                print(self.getWellSums(sandbox1))
                 self.print_board(sandbox1)
                 
                 
