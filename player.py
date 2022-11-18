@@ -286,9 +286,6 @@ class PlayerConnor(Player):
                 #time.sleep(3)
             
             
-                
-                
-        #waiting for sandbox2 to add
         
         
         
