@@ -40,6 +40,7 @@ class PlayerConnor(Player):
         landingHeight = 0
         blockHeight = board.falling.bottom - board.falling.top + 1
         maxheight = board.height
+        
         xList = []
         for (x,y) in board.falling.cells:
             if x not in xList:
@@ -192,7 +193,8 @@ class PlayerConnor(Player):
         
         #time.sleep(0.5)
         bestMoves = []
-        bestWeight = -999
+        bestWeight = -999999999
+        
         
         landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
         rowsEliminatedWeight = 3.4181268101392694
@@ -200,7 +202,8 @@ class PlayerConnor(Player):
         columnTransitionWeight = -9.348695305445199
         numberOfHolesWeight = -7.899265427351652
         wellSumsWeight = -3.3855972247263626
-    
+        
+        
         for i in range(0,6):
             
             
@@ -290,6 +293,7 @@ class PlayerConnor(Player):
         
         
         if len(bestMoves) > 0:
+            
             return bestMoves
         else:
             return None 
