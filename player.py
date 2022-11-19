@@ -15,6 +15,13 @@ class PlayerConnor(Player):
         self.random = Random(seed)
         self.flag = 0
         
+        self.landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
+        self.rowsEliminatedWeight = 3.4181268101392694
+        self.rowTransitionWeight = -3.2178882868487753
+        self.columnTransitionWeight = -9.348695305445199
+        self.numberOfHolesWeight = -7.899265427351652
+        self.wellSumsWeight = -3.3855972247263626
+        
     def print_board(self, board):
         
         print("--------")
@@ -187,23 +194,8 @@ class PlayerConnor(Player):
                         y = y - 1
         
         return wellSum
-                
-        
-    def choose_action(self, board):
-        
-        #time.sleep(0.5)
-        bestMoves = []
-        bestWeight = -999999999
-        
-        
-        landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
-        rowsEliminatedWeight = 3.4181268101392694
-        rowTransitionWeight = -3.2178882868487753
-        columnTransitionWeight = -9.348695305445199
-        numberOfHolesWeight = -7.899265427351652
-        wellSumsWeight = -3.3855972247263626
-        
-        
+    
+    def makeSimulation(self,board,bestMoves,bestWeight):
         for i in range(0,6):
             
             
@@ -235,7 +227,7 @@ class PlayerConnor(Player):
                 numberOfHoles = self.getNumberOfHoles(sandbox1)
                 wellSums = self.getWellSums(sandbox1)
                 
-                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
+                currentWeight = landingHeight*self.landingHeightWeight + rowsEliminated*self.rowsEliminatedWeight + rowTransition*self.rowTransitionWeight + columnTransition*self.columnTransitionWeight + numberOfHoles*self.numberOfHolesWeight + wellSums*self.wellSumsWeight
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
@@ -275,7 +267,7 @@ class PlayerConnor(Player):
                 numberOfHoles = self.getNumberOfHoles(sandbox2)
                 wellSums = self.getWellSums(sandbox2)
                 
-                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
+                currentWeight = landingHeight*self.landingHeightWeight + rowsEliminated*self.rowsEliminatedWeight + rowTransition*self.rowTransitionWeight + columnTransition*self.columnTransitionWeight + numberOfHoles*self.numberOfHolesWeight + wellSums*self.wellSumsWeight
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
@@ -284,6 +276,19 @@ class PlayerConnor(Player):
                 #print("best weight:",bestWeight)
                 #self.print_board(sandbox2)
                 #time.sleep(3)
+        return bestMoves,bestWeight
+        
+    def choose_action(self, board):
+        
+        #time.sleep(0.5)
+        bestMoves = []
+        bestWeight = -999999999
+        
+        bestMoves,bestWeight = self.makeSimulation(board,bestMoves,bestWeight)
+        
+        
+        
+        
             
             
         
