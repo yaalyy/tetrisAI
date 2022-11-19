@@ -2,6 +2,7 @@ from board import Direction, Rotation, Action
 from random import Random
 import random
 import time
+from exceptions import NoBlockException
 
 
 class Player:
@@ -22,6 +23,11 @@ class PlayerConnor(Player):
         self.numberOfHolesWeight = -7.899265427351652
         self.wellSumsWeight = -3.3855972247263626
         
+        self.aggregateWeight = -0.510066
+        self.completeLinesWeight = 0.760666
+        self.holesWeight = -0.35663
+        self.bumpinessWeight = -0.184483
+        
     def print_board(self, board):
         
         print("--------")
@@ -33,13 +39,61 @@ class PlayerConnor(Player):
                 else:
                     s += "."
             print(s, y)
-            
+    
+    def try_rotation(self,rotation, board):
+        for _ in range(rotation):
+                    try:
+                        board.rotate(Rotation.Anticlockwise)
+                    except NoBlockException:
+                        pass
+    def try_moves(self, moves, board):
+    # 4 here since the board spawns the shape at 6 and not in center ***
+            move = 4 - moves
+            if (move >= 0):
+                for _ in range(move):
+                    try:
+                        board.move(Direction.Right)
+                    except NoBlockException:
+                        pass
+            else:
+                for _ in range(abs(move)):
+                    try:
+                        board.move(Direction.Left)
+                    except NoBlockException:
+                        pass
+            try:
+                board.move(Direction.Drop)
+            except NoBlockException:
+                pass
+                    
     def convert_to_matrix(self,board):
         matrix = [[None] * board.width for i in range(board.height)]
         for (x,y) in board.cells:
             matrix[y][x] = 1   #matrix[0] represents the row-0
         return matrix
     
+    def generate_column_height(self, board):
+        columns = [0] * board.width
+        # take only the highest value of y into consideration
+        # start from bottom of y
+        for y in reversed(range(board.height)):
+            for x in range(board.width):
+                if (x,y) in board.cells:
+                    height = abs(board.height - y)
+                    columns[x] = height
+        return columns
+    
+    def getAggregateHeight(self,board):
+        columns = self.generate_column_height(board)
+        return sum(columns) 
+    
+    def getBumpiness(self,board):
+        total = 0
+        columns = self.generate_column_height(board)
+        for i in range(9):
+            total += abs(columns[i] - columns[i+1])
+        return total
+
     def getContainerHeight(self,board):     # Container is a collection of all blocks landed
         maxHeight = board.height
         for (x,y) in board.cells:
@@ -77,7 +131,7 @@ class PlayerConnor(Player):
                 prevHeight = y    
         prevHeight = board.height - prevHeight
         currentHeight = board.height
-        board.move(Direction.Drop)  
+        board.move(Direction.Drop)
         for (x,y) in board.cells:
             if y < currentHeight:
                 currentHeight = y
@@ -225,15 +279,15 @@ class PlayerConnor(Player):
                     sandbox1.move(Direction.Left)
                     currentMoves.append(Direction.Left)
                 
-                landingHeight = self.getLandingHeight(sandbox1)
+                
                 rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
                 currentMoves.append(Direction.Drop)
-                rowTransition = self.getRowTransition(sandbox1)
-                columnTransition = self.getColumnTransition(sandbox1)
+                aggregateHeight = self.getAggregateHeight(sandbox1)
                 numberOfHoles = self.getNumberOfHoles(sandbox1)
-                wellSums = self.getWellSums(sandbox1)
+                bumpiness = self.getBumpiness(sandbox1)
+               
                 
-                currentWeight = landingHeight*self.landingHeightWeight + rowsEliminated*self.rowsEliminatedWeight + rowTransition*self.rowTransitionWeight + columnTransition*self.columnTransitionWeight + numberOfHoles*self.numberOfHolesWeight + wellSums*self.wellSumsWeight
+                currentWeight = aggregateHeight*self.aggregateWeight + rowsEliminated*self.rowsEliminatedWeight + numberOfHoles*self.holesWeight + bumpiness*self.bumpinessWeight
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
@@ -265,15 +319,15 @@ class PlayerConnor(Player):
                     sandbox2.move(Direction.Right)
                     currentMoves.append(Direction.Right)
                 
-                landingHeight = self.getLandingHeight(sandbox2)
+                
                 rowsEliminated = self.getRowsEliminated(sandbox2)   #A Drop move has been acted inside this function
                 currentMoves.append(Direction.Drop)
-                rowTransition = self.getRowTransition(sandbox2)
-                columnTransition = self.getColumnTransition(sandbox2)
+                aggregateHeight = self.getAggregateHeight(sandbox2)
                 numberOfHoles = self.getNumberOfHoles(sandbox2)
-                wellSums = self.getWellSums(sandbox2)
+                bumpiness = self.getBumpiness(sandbox2)
                 
-                currentWeight = landingHeight*self.landingHeightWeight + rowsEliminated*self.rowsEliminatedWeight + rowTransition*self.rowTransitionWeight + columnTransition*self.columnTransitionWeight + numberOfHoles*self.numberOfHolesWeight + wellSums*self.wellSumsWeight
+                
+                currentWeight = aggregateHeight*self.aggregateWeight + rowsEliminated*self.rowsEliminatedWeight + numberOfHoles*self.holesWeight + bumpiness*self.bumpinessWeight
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
