@@ -23,10 +23,10 @@ class PlayerConnor(Player):
         self.numberOfHolesWeight = -7.899265427351652
         self.wellSumsWeight = -3.3855972247263626
         
-        self.aggregateWeight = -0.510066
-        self.completeLinesWeight = 0.760666
-        self.holesWeight = -0.35663
-        self.bumpinessWeight = -0.184483
+        self.aggregateWeight = -2.6
+        self.completeLinesWeight = 3.6
+        self.holesWeight = -6.7
+        self.bumpinessWeight = -0.175
         
     def print_board(self, board):
         
