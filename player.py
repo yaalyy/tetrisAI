@@ -33,6 +33,12 @@ class PlayerConnor(Player):
                 else:
                     s += "."
             print(s, y)
+            
+    def convert_to_matrix(self,board):
+        matrix = [[None] * board.width for i in range(board.height)]
+        for (x,y) in board.cells:
+            matrix[y][x] = 1   #matrix[0] represents the row-0
+        return matrix
     
     def getContainerHeight(self,board):     # Container is a collection of all blocks landed
         maxHeight = board.height
@@ -285,13 +291,6 @@ class PlayerConnor(Player):
         bestWeight = -999999999
         
         bestMoves,bestWeight = self.makeSimulation(board,bestMoves,bestWeight)
-        
-        
-        
-        
-            
-            
-        
         
         
         if len(bestMoves) > 0:
