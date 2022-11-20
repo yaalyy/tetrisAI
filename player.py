@@ -2,6 +2,7 @@ from board import Direction, Rotation, Action
 from random import Random
 import random
 import time
+from exceptions import NoBlockException
 
 
 class Player:
@@ -15,6 +16,19 @@ class PlayerConnor(Player):
         self.random = Random(seed)
         self.flag = 0
         
+        self.landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
+        self.rowsEliminatedWeight = 3.4181268101392694
+        self.rowTransitionWeight = -3.2178882868487753
+        self.columnTransitionWeight = -9.348695305445199
+        self.numberOfHolesWeight = -7.899265427351652
+        self.wellSumsWeight = -3.3855972247263626
+        
+        self.aggregateWeight = -2.6    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+        self.completeLinesWeight = 0.760666
+        self.holesWeight = -6.7
+        self.bumpinessWeight = -0.175
+        self.topHeightWeight = 3.6
+        
     def print_board(self, board):
         
         print("--------")
@@ -27,6 +41,36 @@ class PlayerConnor(Player):
                     s += "."
             print(s, y)
     
+                    
+    
+    def generate_column_height(self, board):
+        columns = [0] * board.width
+
+        for x in range(0,board.width):
+            for y in range(0,board.height-1):   #scannig from top to bottom, from left to right
+                if (x,y) in board.cells:
+                    columns[x] = y 
+                    break    # when it touches the top of this column, go to check the next column
+        return columns
+    
+    def getAggregateHeight(self,board):
+        aggregateHeight = 0
+        for x in range(board.width):
+            height = 0
+            for y in range(board.height):
+                if (x,y) in board.cells:
+                    height = board.height - y
+                    break
+            aggregateHeight = aggregateHeight + height
+        return aggregateHeight
+    
+    def getBumpiness(self,board):
+        total = 0
+        columns = self.generate_column_height(board)
+        for i in range(9):
+            total += abs(columns[i] - columns[i+1])
+        return total
+
     def getContainerHeight(self,board):     # Container is a collection of all blocks landed
         maxHeight = board.height
         for (x,y) in board.cells:
@@ -40,6 +84,7 @@ class PlayerConnor(Player):
         landingHeight = 0
         blockHeight = board.falling.bottom - board.falling.top + 1
         maxheight = board.height
+        
         xList = []
         for (x,y) in board.falling.cells:
             if x not in xList:
@@ -63,7 +108,7 @@ class PlayerConnor(Player):
                 prevHeight = y    
         prevHeight = board.height - prevHeight
         currentHeight = board.height
-        board.move(Direction.Drop)  
+        board.move(Direction.Drop)
         for (x,y) in board.cells:
             if y < currentHeight:
                 currentHeight = y
@@ -129,7 +174,14 @@ class PlayerConnor(Player):
             
             
         return columnTransition
-    
+    def getTopHeight(self,board):
+        maxHeight = board.height
+        for (x,y) in board.cells:
+            if y < maxHeight:
+                maxHeight = y
+        
+        
+        return maxHeight    #the top y-coordinate of container
     def isHole(self,x,y, board, boardTop):
         
         if y <= boardTop:
@@ -148,14 +200,15 @@ class PlayerConnor(Player):
         
     def getNumberOfHoles(self,board):
         holes = 0
-        freeSpace = set()    #represent all coordinates of free space in the container.
-        for i in range(0,board.width):
-            for j in range(board.height - self.getContainerHeight(board), board.height):
-                freeSpace.add((i,j))
-        freeSpace = freeSpace.difference(board.cells)   #remove all non-free coordinates from the set
-        for (x,y) in freeSpace:
-            if self.isHole(x , y, board, board.height-self.getContainerHeight(board)):
-                holes = holes + 1
+        columns = self.generate_column_height(board)
+        
+        for x in range(board.width):
+            for y in range(columns[x], board.height):
+                if y == 0:
+                    break   # 0 means this column is empty, so skip it
+                else:
+                    if (x,y) not in board.cells:
+                        holes = holes + 1
         return holes
     
     def getWellSums(self,board):
@@ -186,110 +239,83 @@ class PlayerConnor(Player):
                         y = y - 1
         
         return wellSum
-                
-        
-    def choose_action(self, board):
-        
-        #time.sleep(0.5)
-        bestMoves = []
-        bestWeight = -999
-        
-        landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
-        rowsEliminatedWeight = 3.4181268101392694
-        rowTransitionWeight = -3.2178882868487753
-        columnTransitionWeight = -9.348695305445199
-        numberOfHolesWeight = -7.899265427351652
-        wellSumsWeight = -3.3855972247263626
     
-        for i in range(0,6):
+    def makeSimulation(self,board,bestMoves,bestWeight):
+        for i in range(0,board.width):
             
             
             for k in range(0,4):
                 sandbox1 = board.clone()  #sandbox1 represents moving left
                 currentMoves = []
-                currentWeight = 0
+                currentWeight = -9999999
+                landed = False
+                leftCoordinate = sandbox1.falling.left
                 if k == 1:
-                    sandbox1.rotate(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
+                    if sandbox1.falling is not None:
+                        landed = sandbox1.rotate(Rotation.Clockwise)
+                        currentMoves.append(Rotation.Clockwise)
+                        if landed:
+                            break
+                        else:
+                            leftCoordinate = sandbox1.falling.left
                 elif k == 2:
-                    sandbox1.rotate(Rotation.Clockwise)
-                    sandbox1.rotate(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
+                    for rotation in range(2):
+                        if sandbox1.falling is not None:
+                            landed = sandbox1.rotate(Rotation.Clockwise)
+                            currentMoves.append(Rotation.Clockwise)
+                            if landed:
+                                break
+                            else:
+                                leftCoordinate = sandbox1.falling.left
                 elif k == 3:
-                    sandbox1.rotate(Rotation.Anticlockwise)
-                    currentMoves.append(Rotation.Anticlockwise)
-                    
-                for j in range(i):
-                    sandbox1.move(Direction.Left)
+                    if sandbox1.falling is not None:
+                        landed = sandbox1.rotate(Rotation.Anticlockwise)
+                        currentMoves.append(Rotation.Anticlockwise)
+                        if landed:
+                            break
+                        else:
+                            leftCoordinate = sandbox1.falling.left
+                while (leftCoordinate > i) and (landed == False):
+                    landed = sandbox1.move(Direction.Left)
                     currentMoves.append(Direction.Left)
-                
-                landingHeight = self.getLandingHeight(sandbox1)
-                rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
-                currentMoves.append(Direction.Drop)
-                rowTransition = self.getRowTransition(sandbox1)
-                columnTransition = self.getColumnTransition(sandbox1)
-                numberOfHoles = self.getNumberOfHoles(sandbox1)
-                wellSums = self.getWellSums(sandbox1)
-                
-                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
-                if currentWeight > bestWeight:
-                    bestMoves = currentMoves
-                    bestWeight = currentWeight
-                
-                #print("current weight below:",currentWeight)
-                #print("best weight:",bestWeight)
-                #self.print_board(sandbox1)
-                #time.sleep(3)
-        for i in range(6,10):
-            
-            
-            for k in range(0,4):
-                sandbox2 = board.clone()  #sandbox2 represents moving right
-                currentMoves = []
-                currentWeight = 0
-                if k == 1:
-                    sandbox2.rotate(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
-                elif k == 2:
-                    sandbox2.rotate(Rotation.Clockwise)
-                    sandbox2.rotate(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
-                    currentMoves.append(Rotation.Clockwise)
-                elif k == 3:
-                    sandbox2.rotate(Rotation.Anticlockwise)
-                    currentMoves.append(Rotation.Anticlockwise)
-                
-                for j in range(i-5):
-                    sandbox2.move(Direction.Right)
+                    if sandbox1.falling is not None:
+                        leftCoordinate = sandbox1.falling.left
+                        
+                while (leftCoordinate < i) and (landed == False):
+                    landed = sandbox1.move(Direction.Right)
                     currentMoves.append(Direction.Right)
+                    if sandbox1.falling is not None:
+                        leftCoordinate = sandbox1.falling.left
+                if landed == False:
+                    sandbox1.move(Direction.Drop)
+                    currentMoves.append(Direction.Drop)
+                #rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
+                #currentMoves.append(Direction.Drop)
+                aggregateHeight = self.getAggregateHeight(sandbox1)
+                numberOfHoles = self.getNumberOfHoles(sandbox1)
+                bumpiness = self.getBumpiness(sandbox1)
+                topHeight = self.getTopHeight(sandbox1)
+               
                 
-                landingHeight = self.getLandingHeight(sandbox2)
-                rowsEliminated = self.getRowsEliminated(sandbox2)   #A Drop move has been acted inside this function
-                currentMoves.append(Direction.Drop)
-                rowTransition = self.getRowTransition(sandbox2)
-                columnTransition = self.getColumnTransition(sandbox2)
-                numberOfHoles = self.getNumberOfHoles(sandbox2)
-                wellSums = self.getWellSums(sandbox2)
+                currentWeight = aggregateHeight*self.aggregateWeight + numberOfHoles*self.holesWeight + bumpiness*self.bumpinessWeight + topHeight*self.topHeightWeight
                 
-                currentWeight = landingHeight*landingHeightWeight + rowsEliminated*rowsEliminatedWeight + rowTransition*rowTransitionWeight + columnTransition*columnTransitionWeight + numberOfHoles*numberOfHolesWeight + wellSums*wellSumsWeight
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
-                
-                #print("current weight below:",currentWeight)
-                #print("best weight:",bestWeight)
-                #self.print_board(sandbox2)
-                #time.sleep(3)
-            
-            
-                
-                
-        #waiting for sandbox2 to add
+       
+        return bestMoves,bestWeight
         
+    def choose_action(self, board):
+        
+        #time.sleep(0.5)
+        bestMoves = []
+        bestWeight = -99999999
+        
+        bestMoves,bestWeight = self.makeSimulation(board,bestMoves,bestWeight)
         
         
         if len(bestMoves) > 0:
+            
             return bestMoves
         else:
             return None 
