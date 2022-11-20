@@ -23,11 +23,10 @@ class PlayerConnor(Player):
         self.numberOfHolesWeight = -7.899265427351652
         self.wellSumsWeight = -3.3855972247263626
         
-        self.aggregateWeight = -2.60    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
-        self.completeLinesWeight = 0.760666
-        self.holesWeight = -6.70
-        self.bumpinessWeight = -0.1750
-        self.topHeightWeight = 3.60
+        self.aggregateWeight = -2.6   #-2.6    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+        self.holesWeight = -6.7   #-6.7
+        self.bumpinessWeight = -0.1750   #-0.1750
+        self.topHeightWeight = 3.6   #3.6
         
     def print_board(self, board):
         
