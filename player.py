@@ -1,6 +1,8 @@
 from board import Direction, Rotation, Action
 from random import Random
+import random
 import time
+from exceptions import NoBlockException
 
 
 class Player:
@@ -8,11 +10,27 @@ class Player:
         raise NotImplementedError
 
 
-class RandomPlayer(Player):
+
+class PlayerConnor(Player):
     def __init__(self, seed=None):
         self.random = Random(seed)
-
+        self.flag = 0
+        
+        self.landingHeightWeight = -4.500158825082766    # weights referenced from EI-Tetris
+        self.rowsEliminatedWeight = 3.4181268101392694
+        self.rowTransitionWeight = -3.2178882868487753
+        self.columnTransitionWeight = -9.348695305445199
+        self.numberOfHolesWeight = -7.899265427351652
+        self.wellSumsWeight = -3.3855972247263626
+        
+        self.aggregateWeight = -2.60    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+        self.completeLinesWeight = 0.760666
+        self.holesWeight = -6.70
+        self.bumpinessWeight = -0.1750
+        self.topHeightWeight = 3.60
+        
     def print_board(self, board):
+        
         print("--------")
         for y in range(24):
             s = ""
@@ -22,166 +40,285 @@ class RandomPlayer(Player):
                 else:
                     s += "."
             print(s, y)
-                
+    
+                    
+    
+    def generate_column_height(self, board):
+        
+        columns = [0] * board.width
 
-            
-
-    def choose_action(self, board):
-        self.print_board(board)
-        time.sleep(0.5)
-        if self.random.random() > 0.97:
-            # 3% chance we'll discard or drop a bomb
-            return self.random.choice([
-                Action.Discard,
-                Action.Bomb,
-            ])
-        else:
-            # 97% chance we'll make a normal move
-            return self.random.choice([
-                Direction.Left,
-                Direction.Right,
-                Direction.Down,
-                Rotation.Anticlockwise,
-                Rotation.Clockwise,
-            ])
-
-class PlayerConnor(Player):
-    def to_matrix(self,board):
-        matrix = [[None] * board.width for i in range(board.height)]
+        for x in range(0,board.width):
+            for y in range(0,board.height-1):   #scannig from top to bottom, from left to right
+                if (x,y) in board.cells:
+                    columns[x] = y 
+                    break    # when it touches the top of this column, go to check the next column
+        return columns
+        
+    def getAggregateHeight(self,board):
+        
+        aggregateHeight = 0
+        for x in range(board.width):
+            height = 0
+            for y in range(board.height-1):
+                if (x,y) in board.cells:
+                    height = board.height - y
+                    break
+            aggregateHeight = aggregateHeight + height
+        return aggregateHeight
+        
+    
+    def getBumpiness(self,board):
+        
+        total = 0
+        columns = self.generate_column_height(board)
+        for i in range(board.width - 1):
+            total += abs(columns[i] - columns[i+1])
+        return total
+        
+    def getContainerHeight(self,board):     # Container is a collection of all blocks landed
+        maxHeight = board.height
         for (x,y) in board.cells:
-          #  print(x,y)
-            matrix[y][x] = 1
-        return matrix
-    def Get_landing_Height(self,board):
-        max_height = board.height + 1
-        for cell in board.cells:
-            if (cell[1] < max_height):
-                max_height = cell[1]
-        return max_height
-    def Get_eroded_Piece_cells_metirc(self,board):
-        lines = 0
-        usefulblock = 1
-
-        matrix = self.to_matrix(board)
-        flag = True
-        # 按行遍历 找有方块的行数 如果有一行全不为空 lines ++ 为2 usefulblock++
-        for i in range(len(matrix) - 1, 0, -1):  # 行
-            count = 0
-            for j in range(len(matrix[0])):  # 列
-                if matrix[i][j] is not None:
-                    count += 1
-            if count == len(matrix[0]):  # 有一行全满
-                lines += 1
-                for k in range(len(matrix[0])):
-                    if matrix[i][k] == 2:  # 如果有该方块
-                        usefulblock += 1
-            # 整行未填充，则跳出循环
-            if count == 0:
-                break
-        # graph = self.to_graph(matrix)
-        return lines * usefulblock
-    def Get_Row_trans(self,board):
-        transition = 0
-        matrix = self.to_matrix(board)
-        for i in range(len(matrix)):
-            for j in range(len(matrix[0])-1):
-                if matrix[i][j] == None and matrix[i][j + 1] != None:
-                    transition += 1
-                if matrix[i][j] != None and matrix[i][j + 1] == None:
-                    transition += 1
-        return transition
+            if y < maxHeight:
+                maxHeight = y
+        
+        maxHeight = board.height - maxHeight
+        return maxHeight    #the total height of container
     
-    def Get_Col_trans(self,board):
-        transition = 0
-        matrix = self.to_matrix(board)
-        for j in range(len(matrix[0])):
-            for i in  range(len(matrix)-1):
-                if matrix[i][j] == None and matrix[i+1][j] !=None:
-                    transition += 1
-                if matrix[i][j] !=None and matrix[i+1][j] == None:
-                    transition+=1
-        return transition
+    def getLandingHeight(self,board):
+        landingHeight = 0
+        blockHeight = board.falling.bottom - board.falling.top + 1
+        maxheight = board.height
+        
+        xList = []
+        for (x,y) in board.falling.cells:
+            if x not in xList:
+                xList.append(x)
+        
+        for (x,y) in board.cells:
+            if x in xList:
+                if y < maxheight:
+                    maxheight = y
+        
+        maxheight = board.height - maxheight
+        
+        landingHeight = maxheight + (blockHeight/2)
+        
+        return landingHeight
+                    
+    def getRowsEliminated(self,board):
+        prevHeight = board.height
+        for (x,y) in board.cells:
+            if y < prevHeight:
+                prevHeight = y    
+        prevHeight = board.height - prevHeight
+        currentHeight = board.height
+        board.move(Direction.Drop)
+        for (x,y) in board.cells:
+            if y < currentHeight:
+                currentHeight = y
+        currentHeight = board.height - currentHeight
+        rowsEliminated = prevHeight - currentHeight
+        if rowsEliminated < 0:
+            rowsEliminated = 0
+        return rowsEliminated   
     
-    def Get_Buried_holes(self,board):
-         holes = 0
-         matrix = self.to_matrix(board)
-         for j in range(len(matrix[0])):  # 列
-             flag = 0
-             colHoles = 0
-             for i in range(len(matrix)):  # 行
-                 if flag == 0 and matrix[i][j] != None:
-                     flag = 1
-                 if flag ==1  and matrix[i][j] == None:
-                      colHoles += 1
-             holes += colHoles
-         return holes
-     
-    def Get_board_wells(self,board):
-        sum_n = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 136, 153, 171, 190, 210, 231, 253, 276,
-                 300]  # 根据井深计算的分数数组
-        wells = 0
-        sum = 0
-
-        matrix = self.to_matrix(board)
-      #  for i in matrix:
-       #     print(i)
-        for j in range(len(matrix[0])):  # 列
-            for i in range(len(matrix) - 1, 0, -1):  # 行
-                if matrix[i][j] == None:
-                    if (j - 1 < 0 or matrix[i][j - 1] != None) and (j + 1 >= board.width or matrix[i][j + 1] != None):
-                        wells += 1
-                    else:
-                        sum += sum_n[wells]
-                        wells = 0
-        if (wells != 0):
-            sum += sum_n[wells]
-        return sum
-    
-    def score_board(self,cloneboard):
-        lh = self.Get_landing_Height(cloneboard)
-        epcm = self.Get_eroded_Piece_cells_metirc(cloneboard)
-        rt = self.Get_Row_trans(cloneboard)
-        ct = self.Get_Col_trans(cloneboard)
-        bh = self.Get_Buried_holes(cloneboard)
-        bw = self.Get_board_wells(cloneboard)
-        return -45 * lh + 34 * epcm - 32 * rt - 93 * ct - 79 * bh - 34 * bw+150*min([y for x,y in cloneboard.cells])+150*sum([y for x,y in cloneboard.cells])/len(cloneboard.cells)
-    
-    def try_move(self,board,xtarget,rtarget):
-        cloneboard  = board.clone()
-        times_rotate = 0
-        move_ans=[]
-        res = False
-        trymove = None
-        while True:
-            if times_rotate < rtarget :
-                trymove = Rotation.Anticlockwise
-                times_rotate+= 1
-            elif cloneboard.falling.left < xtarget:
-                trymove = Direction.Right        # trymove = [Direction.Right for i in range(xtarget-cloneboard.falling.left)]
-            elif cloneboard.falling.left >xtarget:
-                trymove = Direction.Left         #  trymove = [Direction.Left for i in range(cloneboard.falling.left-xtarget)]
+    def getRowTransition(self,board):
+        rowTransition = 0
+        freeSpace = set()    #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            for j in range(board.height - self.getContainerHeight(board), board.height):
+                freeSpace.add((i,j))
+        
+        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
+        
+        for (x,y) in freeSpace:
+            if x == 0:
+                rowTransition = rowTransition + 1
+                if (x+1,y) not in freeSpace:
+                    rowTransition = rowTransition + 1
+            elif x == board.width - 1:
+                rowTransition = rowTransition + 1
+                if (x-1,y) not in freeSpace:
+                    rowTransition = rowTransition + 1
             else:
-                trymove = Direction.Drop
-
-            if isinstance(trymove, Direction):
-                res = cloneboard.move(trymove)
-            elif isinstance(trymove,Rotation):
-                res = cloneboard.rotate(trymove)
-            move_ans.append(trymove)
-
-            if res:
-                #这时会把cell放到board里面
-                score = self.score_board(cloneboard)
-                return score,move_ans
+                if ((x-1,y) not in freeSpace):
+                    rowTransition = rowTransition + 1
+                if ((x+1,y) not in freeSpace):
+                    rowTransition = rowTransition + 1
+                    
+        return rowTransition
+        
+    def getColumnTransition(self,board):
+        columnTransition = 0
+        xValid = []
+        for (x,y) in board.cells:
+            if x not in xValid:
+                xValid.append(x)
+                
+        freeSpace = set()  #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            if i in xValid:
+                for j in range(0,board.height):
+                    freeSpace.add((i,j))
+        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
+        for (x,y) in freeSpace:
+            if y == board.height - 1:
+                columnTransition = columnTransition + 1
+                if (x,y-1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            elif y == 0:
+                columnTransition = columnTransition + 1
+                if (x,y+1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            else:
+                if (x,y+1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+                if (x,y-1) not in freeSpace:
+                    columnTransition = columnTransition + 1
+            
+            
+        return columnTransition
+    def getTopHeight(self,board):
+        """
+        maxHeight = board.height
+        for (x,y) in board.cells:
+            if y < maxHeight:
+                maxHeight = y
+        
+        
+        return maxHeight    #the top y-coordinate of container
+        """
+        minY = 24 #For minimum height
+        for y in range(board.height):
+            for x in range(board.width):
+                if (x, y) in board.cells:
+                    if y < minY:
+                        minY = y
+        return minY
+    def isHole(self,x,y, board, boardTop):
+        
+        if y <= boardTop:
+            return False
+        elif y == boardTop + 1:
+            if (x,y-1) in board.cells:
+                return True
+            else:
+                return False
+        elif y > boardTop + 1:
+            if (x,y-1) in board.cells:
+                return True
+            else:
+                return self.isHole(x,y-1,board,boardTop)
+        
+    def getNumberOfHoles(self,board):
+        holes = 0
+        columns = self.generate_column_height(board)
+        
+        for x in range(board.width):
+            for y in range(columns[x], board.height):
+                if y == 0:
+                    break   # 0 means this column is empty, so skip it
+                else:
+                    if (x,y) not in board.cells:
+                        holes = holes + 1
+        return holes
+    
+    def getWellSums(self,board):
+        wellSum = 0
+        freeSpace = set()    #represent all coordinates of free space in the container.
+        for i in range(0,board.width):
+            for j in range(board.height - self.getContainerHeight(board), board.height):
+                freeSpace.add((i,j))
+        freeSpace = freeSpace.difference(board.cells)   #remove all non-free coordinates from the set
+        for (x,y) in freeSpace:
+            if x == 0:
+                if ((x+1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+            if x == board.width - 1:
+                if ((x-1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x-1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+            else:
+                if ((x+1,y) in board.cells) and ((x-1,y) in board.cells):
+                    wellSum = wellSum + 1
+                    while ((x-1,y-1) in board.cells) and ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
+                        wellSum = wellSum + 1
+                        y = y - 1
+        
+        return wellSum
+    
+    def makeSimulation(self,board):
+        
+        bestMoves = []
+        bestWeight = -9999999
+        for i in range(board.width):
+            
+            
+            for k in range(4):
+                sandbox1 = board.clone()  #sandbox1 represents moving left
+                currentMoves = []
+                landed = False
+                leftCoordinate = sandbox1.falling.left
+                
+                for rotation in range(k):
+                    if sandbox1.falling is not None:
+                        landed = sandbox1.rotate(Rotation.Anticlockwise)
+                        currentMoves.append(Rotation.Anticlockwise)
+                        if landed:
+                            break
+                        else:
+                            leftCoordinate = sandbox1.falling.left
+                        
+                while (leftCoordinate > i) and (landed == False):
+                    landed = sandbox1.move(Direction.Left)
+                    currentMoves.append(Direction.Left)
+                    if sandbox1.falling is not None:
+                        leftCoordinate = sandbox1.falling.left
+                        
+                while (leftCoordinate < i) and (landed == False):
+                    landed = sandbox1.move(Direction.Right)
+                    currentMoves.append(Direction.Right)
+                    if sandbox1.falling is not None:
+                        leftCoordinate = sandbox1.falling.left
+                if landed == False:
+                    sandbox1.move(Direction.Drop)
+                    currentMoves.append(Direction.Drop)
+                #rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
+                #currentMoves.append(Direction.Drop)
+                aggregateHeight = self.getAggregateHeight(sandbox1)
+                numberOfHoles = self.getNumberOfHoles(sandbox1)
+                bumpiness = self.getBumpiness(sandbox1)
+                topHeight = self.getTopHeight(sandbox1)
+               
+                
+                currentWeight = aggregateHeight*self.aggregateWeight + numberOfHoles*self.holesWeight + bumpiness*self.bumpinessWeight + topHeight*self.topHeightWeight
+                
+                if currentWeight > bestWeight:
+                    bestMoves = currentMoves
+                    bestWeight = currentWeight
+                #print(bumpiness)
+        #time.sleep(2)
+        return bestMoves
+        
     def choose_action(self, board):
-        best_score = 0
-        bestmove = None
-        for xtarget in range(10):
-            for rtarget in range(4):
-                score ,move = self.try_move(board,xtarget,rtarget)
-                if score > best_score:
-                    best_score = score
-                    bestmove =  move
-      #  print( "ans", bestmove)
-        return bestmove       
+        
+        #time.sleep(0.5)
+        bestMoves = []
+        
+        bestMoves = self.makeSimulation(board)
+        
+        
+        if len(bestMoves) > 0:
+            
+            return bestMoves
+        else:
+            return None 
+        
+        
+            
 SelectedPlayer = PlayerConnor
