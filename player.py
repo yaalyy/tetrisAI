@@ -53,37 +53,17 @@ class PlayerConnor(Player):
                     columns[x] = y 
                     break    # when it touches the top of this column, go to check the next column
         return columns
-        """
-        listCol = [0,0,0,0,0,0,0,0,0,0]
-        for x in range(10):
-            for y in range(23):
-                if (x,y) in board.cells:
-                    listCol[x] = y
-                    break
-        return listCol
-        """
     def getAggregateHeight(self,board):
         
         aggregateHeight = 0
         for x in range(board.width):
             height = 0
-            for y in range(board.height-1):
+            for y in range(board.height):
                 if (x,y) in board.cells:
                     height = board.height - y
                     break
             aggregateHeight = aggregateHeight + height
         return aggregateHeight
-        """
-        aggregate = 0
-        for x in range(board.width):
-            height = 0
-            for y in range(board.height):
-                if (x, y) in board.cells:
-                    height = 24 - y
-                    break
-            aggregate = aggregate + height
-        return aggregate
-        """
     
     def getBumpiness(self,board):
         
@@ -92,13 +72,7 @@ class PlayerConnor(Player):
         for i in range(board.width - 1):
             total += abs(columns[i] - columns[i+1])
         return total
-        """
-        total = 0
-        listBump = self.generate_column_height(board)
-        for x in range(board.width - 1):
-            total += abs(listBump[x] - listBump[x+1])
-        return total
-        """
+        
     def getContainerHeight(self,board):     # Container is a collection of all blocks landed
         maxHeight = board.height
         for (x,y) in board.cells:
@@ -203,7 +177,7 @@ class PlayerConnor(Player):
             
         return columnTransition
     def getTopHeight(self,board):
-        """
+        
         maxHeight = board.height
         for (x,y) in board.cells:
             if y < maxHeight:
@@ -211,14 +185,7 @@ class PlayerConnor(Player):
         
         
         return maxHeight    #the top y-coordinate of container
-        """
-        minY = 24 #For minimum height
-        for y in range(board.height):
-            for x in range(board.width):
-                if (x, y) in board.cells:
-                    if y < minY:
-                        minY = y
-        return minY
+       
     def isHole(self,x,y, board, boardTop):
         
         if y <= boardTop:
@@ -233,19 +200,9 @@ class PlayerConnor(Player):
                 return True
             else:
                 return self.isHole(x,y-1,board,boardTop)
-        """
-        listHoles = self.generate_column_height(board)
-        holesCounter = 0
-        for x in range(10):
-            for y in range(listHoles[x], 24):
-                if y != 0:
-                    if (x,y) not in board.cells:
-                        holesCounter += 1
-                else:
-                    break
-        return holesCounter
-        """
+        
     def getNumberOfHoles(self,board):
+        
         holes = 0
         columns = self.generate_column_height(board)
         
@@ -257,7 +214,7 @@ class PlayerConnor(Player):
                     if (x,y) not in board.cells:
                         holes = holes + 1
         return holes
-    
+       
     def getWellSums(self,board):
         wellSum = 0
         freeSpace = set()    #represent all coordinates of free space in the container.
@@ -297,6 +254,7 @@ class PlayerConnor(Player):
             for k in range(4):
                 sandbox1 = board.clone()  #sandbox1 represents moving left
                 currentMoves = []
+                currentWeight = -9999999
                 landed = False
                 leftCoordinate = sandbox1.falling.left
                 
