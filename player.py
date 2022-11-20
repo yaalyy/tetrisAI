@@ -23,11 +23,11 @@ class PlayerConnor(Player):
         self.numberOfHolesWeight = -7.899265427351652
         self.wellSumsWeight = -3.3855972247263626
         
-        self.aggregateWeight = -2.6    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+        self.aggregateWeight = -2.60    #weights referenced from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
         self.completeLinesWeight = 0.760666
-        self.holesWeight = -6.7
-        self.bumpinessWeight = -0.175
-        self.topHeightWeight = 3.6
+        self.holesWeight = -6.70
+        self.bumpinessWeight = -0.1750
+        self.topHeightWeight = 3.60
         
     def print_board(self, board):
         
@@ -47,7 +47,7 @@ class PlayerConnor(Player):
         columns = [0] * board.width
 
         for x in range(0,board.width):
-            for y in range(0,board.height-1):   #scannig from top to bottom, from left to right
+            for y in range(0,board.height):   #scannig from top to bottom, from left to right
                 if (x,y) in board.cells:
                     columns[x] = y 
                     break    # when it touches the top of this column, go to check the next column
@@ -240,17 +240,20 @@ class PlayerConnor(Player):
         
         return wellSum
     
-    def makeSimulation(self,board,bestMoves,bestWeight):
+    def makeSimulation(self,board):
+        bestMoves = []
+        bestWeight = -99999999
         for i in range(0,board.width):
             
             
             for k in range(0,4):
                 sandbox1 = board.clone()  #sandbox1 represents moving left
                 currentMoves = []
-                currentWeight = -9999999
+                currentWeight = -99999999
                 landed = False
                 leftCoordinate = sandbox1.falling.left
-                if k == 1:
+                
+                for rotation in range(0,k):
                     if sandbox1.falling is not None:
                         landed = sandbox1.rotate(Rotation.Clockwise)
                         currentMoves.append(Rotation.Clockwise)
@@ -258,23 +261,7 @@ class PlayerConnor(Player):
                             break
                         else:
                             leftCoordinate = sandbox1.falling.left
-                elif k == 2:
-                    for rotation in range(2):
-                        if sandbox1.falling is not None:
-                            landed = sandbox1.rotate(Rotation.Clockwise)
-                            currentMoves.append(Rotation.Clockwise)
-                            if landed:
-                                break
-                            else:
-                                leftCoordinate = sandbox1.falling.left
-                elif k == 3:
-                    if sandbox1.falling is not None:
-                        landed = sandbox1.rotate(Rotation.Anticlockwise)
-                        currentMoves.append(Rotation.Anticlockwise)
-                        if landed:
-                            break
-                        else:
-                            leftCoordinate = sandbox1.falling.left
+                        
                 while (leftCoordinate > i) and (landed == False):
                     landed = sandbox1.move(Direction.Left)
                     currentMoves.append(Direction.Left)
@@ -303,15 +290,14 @@ class PlayerConnor(Player):
                     bestMoves = currentMoves
                     bestWeight = currentWeight
        
-        return bestMoves,bestWeight
+        return bestMoves
         
     def choose_action(self, board):
         
         #time.sleep(0.5)
         bestMoves = []
-        bestWeight = -99999999
         
-        bestMoves,bestWeight = self.makeSimulation(board,bestMoves,bestWeight)
+        bestMoves = self.makeSimulation(board)
         
         
         if len(bestMoves) > 0:
