@@ -120,67 +120,33 @@ class PlayerConnor(Player):
         return rowsEliminated   
     
     def getRowTransition(self,board):
-        rowTransition = 0
-        freeSpace = set()    #represent all coordinates of free space in the container.
-        for i in range(0,board.width):
-            for j in range(board.height - self.getContainerHeight(board), board.height):
-                freeSpace.add((i,j))
-        
-        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
-        
-        for (x,y) in freeSpace:
-            if x == 0:
-                rowTransition = rowTransition + 1
-                if (x+1,y) not in freeSpace:
-                    rowTransition = rowTransition + 1
-            elif x == board.width - 1:
-                rowTransition = rowTransition + 1
-                if (x-1,y) not in freeSpace:
-                    rowTransition = rowTransition + 1
-            else:
-                if ((x-1,y) not in freeSpace):
-                    rowTransition = rowTransition + 1
-                if ((x+1,y) not in freeSpace):
-                    rowTransition = rowTransition + 1
-                    
-        return rowTransition
+        row_trans = 0
+        for y in range(board.height - 1, 0, -1):
+            for x in range(board.width):
+                if ((x,y) in board.cells) and ((x+1,y) not in board.cells):
+                    row_trans = row_trans + 1
+                if ((x,y) not in board.cells) and ((x+1,y) in board.cells):
+                    row_trans = row_trans + 1
+        return row_trans 
         
     def getColumnTransition(self,board):
-        columnTransition = 0
-        xValid = []
-        for (x,y) in board.cells:
-            if x not in xValid:
-                xValid.append(x)
-                
-        freeSpace = set()  #represent all coordinates of free space in the container.
-        for i in range(0,board.width):
-            if i in xValid:
-                for j in range(0,board.height):
-                    freeSpace.add((i,j))
-        freeSpace = freeSpace.difference(board.cells)  #remove all non-free coordinates from the set
-        for (x,y) in freeSpace:
-            if y == board.height - 1:
-                columnTransition = columnTransition + 1
-                if (x,y-1) not in freeSpace:
-                    columnTransition = columnTransition + 1
-            elif y == 0:
-                columnTransition = columnTransition + 1
-                if (x,y+1) not in freeSpace:
-                    columnTransition = columnTransition + 1
-            else:
-                if (x,y+1) not in freeSpace:
-                    columnTransition = columnTransition + 1
-                if (x,y-1) not in freeSpace:
-                    columnTransition = columnTransition + 1
-            
-            
-        return columnTransition
+        col_trans = 0
+        for x in range(board.width):
+            for y in range(board.height - 1, 1, -1):
+                if ((x,y) in board.cells) and ((x,y-1) not in board.cells):
+                    col_trans = col_trans + 1
+                if ((x,y) not in board.cells) and ((x,y-1) in board.cells):
+                    col_trans = col_trans + 1
+        return col_trans
+    
     def getTopHeight(self,board):
         
-        maxHeight = board.height
+        maxHeight = board.height - 1
         for (x,y) in board.cells:
             if y < maxHeight:
                 maxHeight = y
+                
+        maxHeight = board.height - 1 - maxHeight
         
         
         return maxHeight    #the top y-coordinate of container
@@ -203,46 +169,37 @@ class PlayerConnor(Player):
     def getNumberOfHoles(self,board):
         
         holes = 0
-        columns = self.generate_column_height(board)
-        
-        for x in range(board.width):
-            for y in range(columns[x], board.height):
-                if y == 0:
-                    break   # 0 means this column is empty, so skip it
-                else:
-                    if (x,y) not in board.cells:
-                        holes = holes + 1
+        for x in range(10):
+            holes_in_col = None
+            for y in range(24):
+                if (holes_in_col == None) and ((x, y) in board.cells):
+                    holes_in_col = 0
+                if (holes_in_col != None) and ((x, y) not in board.cells):
+                    holes_in_col += 1
+                
+            if holes_in_col is not None:
+                holes += holes_in_col
         return holes
+    
+
        
     def getWellSums(self,board):
-        wellSum = 0
-        freeSpace = set()    #represent all coordinates of free space in the container.
-        for i in range(0,board.width):
-            for j in range(board.height - self.getContainerHeight(board), board.height):
-                freeSpace.add((i,j))
-        freeSpace = freeSpace.difference(board.cells)   #remove all non-free coordinates from the set
-        for (x,y) in freeSpace:
-            if x == 0:
-                if ((x+1,y) in board.cells):
-                    wellSum = wellSum + 1
-                    while ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
-                        wellSum = wellSum + 1
-                        y = y - 1
-            if x == board.width - 1:
-                if ((x-1,y) in board.cells):
-                    wellSum = wellSum + 1
-                    while ((x-1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
-                        wellSum = wellSum + 1
-                        y = y - 1
-            else:
-                if ((x+1,y) in board.cells) and ((x-1,y) in board.cells):
-                    wellSum = wellSum + 1
-                    while ((x-1,y-1) in board.cells) and ((x+1,y-1) in board.cells) and ((y-1) >= (board.height - self.getContainerHeight(board))) and ((x,y-1) not in board.cells):
-                        wellSum = wellSum + 1
-                        y = y - 1
-        
-        return wellSum
-    
+        wells = 0
+        total = 0
+        for x in range(board.width):
+            for y in range(board.height):
+                if (x, y) not in board.cells:
+                    
+                    if ((x - 1) < 0) or ((x - 1, y) in board.cells):
+                        if ((x + 1) > 9) or ((x + 1, y) in board.cells):
+                            wells = wells + 1
+                    else:
+                        i = 0
+                        while i<= wells:
+                            total += i
+                            i += 1
+                        wells = 0
+        return total
     def makeSimulation(self,board):
         
         bestMoves = []
@@ -280,25 +237,50 @@ class PlayerConnor(Player):
                 if landed == False:
                     sandbox1.move(Direction.Drop)
                     currentMoves.append(Direction.Drop)
-                #rowsEliminated = self.getRowsEliminated(sandbox1)   #A Drop move has been acted inside this function
-                #currentMoves.append(Direction.Drop)
-                aggregateHeight = self.getAggregateHeight(sandbox1)
-                numberOfHoles = self.getNumberOfHoles(sandbox1)
-                bumpiness = self.getBumpiness(sandbox1)
-                topHeight = self.getTopHeight(sandbox1)
-               
-                
-                currentWeight = aggregateHeight*self.aggregateWeight + numberOfHoles*self.holesWeight + bumpiness*self.bumpinessWeight + topHeight*self.topHeightWeight
-                
+
+        
+                currentWeight = self.calScore(sandbox1)
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
                 #print(bumpiness)
         #time.sleep(2)
         return bestMoves
+    
+    def calScore(self, board):
+        global score_before
+        lines_removed = 0
+        row_trans = 0
+        col_trans = 0
+        holes = 0
+        total = 0
+        height = 0
+
+        score_difference = board.score - score_before
+
+        if 0 <= score_difference < 100:
+            lines_removed = 0
+        elif 100 <= score_difference < 400:
+            lines_removed = 1
+        elif 400 <= score_difference < 800:
+            lines_removed = 2
+        elif 800 <= score_difference < 1600:
+            lines_removed = 3
+        else:
+            lines_removed = 4
         
+        row_trans = self.getRowTransition(board)
+        col_trans = self.getColumnTransition(board)
+        holes = self.getNumberOfHoles(board)
+        total = self.getWellSums(board)
+        height = self.getTopHeight(board)
+        
+        score = 34 * lines_removed - 16 * row_trans - 46.5 * col_trans - 39.5 * holes - 17 * total - 22.5 * height
+
+        return score
     def choose_action(self, board):
-        
+        global score_before
+        score_before = board.score
         #time.sleep(0.5)
         bestMoves = []
         
