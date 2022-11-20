@@ -44,33 +44,37 @@ class PlayerConnor(Player):
                     
     
     def generate_column_height(self, board):
+        
         columns = [0] * board.width
 
         for x in range(0,board.width):
-            for y in range(0,board.height):   #scannig from top to bottom, from left to right
+            for y in range(0,board.height-1):   #scannig from top to bottom, from left to right
                 if (x,y) in board.cells:
                     columns[x] = y 
                     break    # when it touches the top of this column, go to check the next column
         return columns
-    
+        
     def getAggregateHeight(self,board):
+        
         aggregateHeight = 0
         for x in range(board.width):
             height = 0
-            for y in range(board.height):
+            for y in range(board.height-1):
                 if (x,y) in board.cells:
                     height = board.height - y
                     break
             aggregateHeight = aggregateHeight + height
         return aggregateHeight
+        
     
     def getBumpiness(self,board):
+        
         total = 0
         columns = self.generate_column_height(board)
-        for i in range(9):
+        for i in range(board.width - 1):
             total += abs(columns[i] - columns[i+1])
         return total
-
+        
     def getContainerHeight(self,board):     # Container is a collection of all blocks landed
         maxHeight = board.height
         for (x,y) in board.cells:
@@ -175,6 +179,7 @@ class PlayerConnor(Player):
             
         return columnTransition
     def getTopHeight(self,board):
+        """
         maxHeight = board.height
         for (x,y) in board.cells:
             if y < maxHeight:
@@ -182,6 +187,14 @@ class PlayerConnor(Player):
         
         
         return maxHeight    #the top y-coordinate of container
+        """
+        minY = 24 #For minimum height
+        for y in range(board.height):
+            for x in range(board.width):
+                if (x, y) in board.cells:
+                    if y < minY:
+                        minY = y
+        return minY
     def isHole(self,x,y, board, boardTop):
         
         if y <= boardTop:
@@ -196,7 +209,6 @@ class PlayerConnor(Player):
                 return True
             else:
                 return self.isHole(x,y-1,board,boardTop)
-                
         
     def getNumberOfHoles(self,board):
         holes = 0
@@ -241,22 +253,22 @@ class PlayerConnor(Player):
         return wellSum
     
     def makeSimulation(self,board):
+        
         bestMoves = []
-        bestWeight = -99999999
-        for i in range(0,board.width):
+        bestWeight = -9999999
+        for i in range(board.width):
             
             
-            for k in range(0,4):
+            for k in range(4):
                 sandbox1 = board.clone()  #sandbox1 represents moving left
                 currentMoves = []
-                currentWeight = -99999999
                 landed = False
                 leftCoordinate = sandbox1.falling.left
                 
-                for rotation in range(0,k):
+                for rotation in range(k):
                     if sandbox1.falling is not None:
-                        landed = sandbox1.rotate(Rotation.Clockwise)
-                        currentMoves.append(Rotation.Clockwise)
+                        landed = sandbox1.rotate(Rotation.Anticlockwise)
+                        currentMoves.append(Rotation.Anticlockwise)
                         if landed:
                             break
                         else:
@@ -289,7 +301,8 @@ class PlayerConnor(Player):
                 if currentWeight > bestWeight:
                     bestMoves = currentMoves
                     bestWeight = currentWeight
-       
+                #print(bumpiness)
+        #time.sleep(2)
         return bestMoves
         
     def choose_action(self, board):
