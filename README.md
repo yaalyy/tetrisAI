@@ -33,4 +33,5 @@ If that interface does not work, there are two alternative interfaces available:
 The pygame version is recommended as it works fastest when autoplaying.
 ## Reference
 1. Islam El-Ashi (2016) El-Tetris – an improvement on Pierre Dellacherie's algorithm, imake. Available at: https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/ (Accessed: November 13, 2022). 
+2. Lee, Y. (2013) Tetris AI – the (near) perfect bot, Code My Road. Available at: https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/ (Accessed: November 20, 2022). 
 ‌
