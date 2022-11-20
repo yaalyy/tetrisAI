@@ -47,7 +47,7 @@ class PlayerConnor(Player):
         columns = [0] * board.width
 
         for x in range(0,board.width):
-            for y in range(0,board.height-1):   #scannig from top to bottom, from left to right
+            for y in range(0,board.height):   #scannig from top to bottom, from left to right
                 if (x,y) in board.cells:
                     columns[x] = y 
                     break    # when it touches the top of this column, go to check the next column
