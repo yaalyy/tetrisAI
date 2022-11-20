@@ -53,19 +53,17 @@ class PlayerConnor(Player):
                     columns[x] = y 
                     break    # when it touches the top of this column, go to check the next column
         return columns
-        
     def getAggregateHeight(self,board):
         
         aggregateHeight = 0
         for x in range(board.width):
             height = 0
-            for y in range(board.height-1):
+            for y in range(board.height):
                 if (x,y) in board.cells:
                     height = board.height - y
                     break
             aggregateHeight = aggregateHeight + height
         return aggregateHeight
-        
     
     def getBumpiness(self,board):
         
@@ -179,7 +177,7 @@ class PlayerConnor(Player):
             
         return columnTransition
     def getTopHeight(self,board):
-        """
+        
         maxHeight = board.height
         for (x,y) in board.cells:
             if y < maxHeight:
@@ -187,14 +185,7 @@ class PlayerConnor(Player):
         
         
         return maxHeight    #the top y-coordinate of container
-        """
-        minY = 24 #For minimum height
-        for y in range(board.height):
-            for x in range(board.width):
-                if (x, y) in board.cells:
-                    if y < minY:
-                        minY = y
-        return minY
+       
     def isHole(self,x,y, board, boardTop):
         
         if y <= boardTop:
@@ -211,6 +202,7 @@ class PlayerConnor(Player):
                 return self.isHole(x,y-1,board,boardTop)
         
     def getNumberOfHoles(self,board):
+        
         holes = 0
         columns = self.generate_column_height(board)
         
@@ -222,7 +214,7 @@ class PlayerConnor(Player):
                     if (x,y) not in board.cells:
                         holes = holes + 1
         return holes
-    
+       
     def getWellSums(self,board):
         wellSum = 0
         freeSpace = set()    #represent all coordinates of free space in the container.
@@ -262,6 +254,7 @@ class PlayerConnor(Player):
             for k in range(4):
                 sandbox1 = board.clone()  #sandbox1 represents moving left
                 currentMoves = []
+                currentWeight = -9999999
                 landed = False
                 leftCoordinate = sandbox1.falling.left
                 
